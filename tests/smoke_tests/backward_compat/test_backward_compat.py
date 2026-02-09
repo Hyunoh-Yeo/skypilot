@@ -851,9 +851,9 @@ class TestBackwardCompatibility:
         commands = [
             # Launch two clusters with old version
             f'{self.ACTIVATE_BASE} && {smoke_tests_utils.SKY_API_RESTART} && '
-            f'sky launch --cloud {generic_cloud} -y -c {cluster_name} examples/minimal.yaml',
+            f'sky launch --cloud {generic_cloud} -y {smoke_tests_utils.LOW_RESOURCE_ARG} -c {cluster_name} examples/minimal.yaml',
             f'{self.ACTIVATE_BASE} && '
-            f'sky launch --cloud {generic_cloud} -y -c {another_cluster} examples/minimal.yaml',
+            f'sky launch --cloud {generic_cloud} -y {smoke_tests_utils.LOW_RESOURCE_ARG} -c {another_cluster} examples/minimal.yaml',
 
             # Test New client with Old server
             # Should show warning and show both clusters (no filtering)
