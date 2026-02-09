@@ -842,3 +842,58 @@ class TestBackwardCompatibility:
             teardown = f'{self.ACTIVATE_CURRENT} && (sky down {cluster_name} -y || true) && (sky volumes delete {volume_name} -y || true)'
             self.run_compatibility_test(f'{volume_name}-compat', commands,
                                         teardown)
+
+    def test_cluster_status_filter_compatibility(self, generic_cloud: str):
+        """Test that new --cluster flag is backward compatible with old servers"""
+        cluster_name = smoke_tests_utils.get_cluster_name()
+        another_cluster = f"{cluster_name}-2"
+
+        commands = [
+            # Launch two clusters with old version
+            f'{self.ACTIVATE_BASE} && {smoke_tests_utils.SKY_API_RESTART} && '
+            f'sky launch --cloud {generic_cloud} -y -c {cluster_name} examples/minimal.yaml',
+            f'{self.ACTIVATE_BASE} && '
+            f'sky launch --cloud {generic_cloud} -y -c {another_cluster} examples/minimal.yaml',
+
+            # Test New client with Old server
+            # Should show warning and show both clusters (no filtering)
+            f'{self.ACTIVATE_CURRENT} && result="$(sky api status --cluster {cluster_name} 2>&1)"; '
+            f'exit_code=$?; '
+            f'echo "Exit code: $exit_code"; '
+            f'echo "$result"; '
+            # Verify success
+            f'[ "$exit_code" -eq 0 ] || exit 1; '
+            # Verify warning appears (flag is ignored)
+            f'echo "$result" | grep -qi "flag is ignored.*server does not support" || '
+            f'{{ echo "ERROR: Expected warning about unsupported flag"; exit 1; }}; '
+            # Verify no filtering (both clusters shown)
+            f'echo "$result" | grep -q "{cluster_name}" || exit 1; '
+            f'echo "$result" | grep -q "{another_cluster}" || '
+            f'{{ echo "ERROR: Flag was applied when it should be ignored"; exit 1; }}',
+
+            # Upgrade server
+            f'{self.ACTIVATE_CURRENT} && {smoke_tests_utils.SKY_API_RESTART}',
+
+            # Test with New client with New server
+            # Should have NO warning AND show only filtered cluster
+            f'{self.ACTIVATE_CURRENT} && result="$(sky api status --cluster {cluster_name} 2>&1)"; '
+            f'exit_code=$?; '
+            f'echo "Exit code: $exit_code"; '
+            f'echo "$result"; '
+            # Verify success
+            f'[ "$exit_code" -eq 0 ] || exit 1; '
+            # Verify NO warning (flag is supported)
+            f'echo "$result" | grep -qi "flag is ignored.*server does not support" || '
+            f'{{ echo "ERROR: Unexpected warning with new server"; exit 1; }}; '
+            # Verify filtering WORKS (only target cluster shown)
+            f'echo "$result" | grep -q "{cluster_name}" || exit 1; '
+            f'! echo "$result" | grep -q "{another_cluster}" || '
+            f'{{ echo "ERROR: Filtering not working - both clusters shown"; exit 1; }}',
+
+            # Without flag should show all
+            f'{self.ACTIVATE_CURRENT} && result="$(sky api status)"; '
+            f'echo "$result" | grep "{cluster_name}" && '
+            f'echo "$result" | grep "{another_cluster}"',
+        ]
+        teardown = f'{self.ACTIVATE_CURRENT} && sky down {cluster_name}* -y'
+        self.run_compatibility_test(cluster_name, commands, teardown)
