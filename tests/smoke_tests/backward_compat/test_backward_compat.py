@@ -845,6 +845,13 @@ class TestBackwardCompatibility:
 
     def test_cluster_status_filter_compatibility(self, generic_cloud: str):
         """Test that new --cluster flag is backward compatible with old servers"""
+        CLUSTER_FILTER_MIN_API_VERSION = 37  # The version that introduced this feature
+        if self.BASE_API_VERSION >= CLUSTER_FILTER_MIN_API_VERSION:
+            pytest.skip(
+                f'Base API version {self.BASE_API_VERSION} already supports cluster filtering '
+                f'(introduced in version {CLUSTER_FILTER_MIN_API_VERSION}). Skipping test.'
+            )
+
         cluster_name = smoke_tests_utils.get_cluster_name()
         another_cluster = f"{cluster_name}-2"
 
@@ -854,6 +861,10 @@ class TestBackwardCompatibility:
             f'sky launch --cloud {generic_cloud} -y {smoke_tests_utils.LOW_RESOURCE_ARG} -c {cluster_name} examples/minimal.yaml',
             f'{self.ACTIVATE_BASE} && '
             f'sky launch --cloud {generic_cloud} -y {smoke_tests_utils.LOW_RESOURCE_ARG} -c {another_cluster} examples/minimal.yaml',
+
+            # Submit long-running jobs so they show up in sky api status
+            f'{self.ACTIVATE_BASE} && sky exec -d {cluster_name} "sleep 300"',
+            f'{self.ACTIVATE_BASE} && sky exec -d {another_cluster} "sleep 300"',
 
             # Test New client with Old server
             # Should show warning and show both clusters (no filtering)
