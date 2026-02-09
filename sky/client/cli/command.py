@@ -71,7 +71,6 @@ from sky.provision.kubernetes import utils as kubernetes_utils
 from sky.schemas.api import responses
 from sky.server import common as server_common
 from sky.server import constants as server_constants
-from sky.server import versions
 from sky.server.requests import payloads
 from sky.server.requests import requests
 from sky.skylet import autostop_lib
@@ -7337,14 +7336,6 @@ INT_OR_NONE = IntOrNone()
 def api_status(request_id_prefixes: Optional[List[str]], all_status: bool,
                verbose: bool, limit: Optional[int], cluster: Optional[str]):
     """List requests on SkyPilot API server."""
-    # Backward compatibility check for the new flag cluster_name
-    version = versions.get_remote_api_version()
-    if version is None:
-        version = -1
-    if (cluster is not None) and (version < 37):
-        logger.warning(
-            'The flag is ignored because the server does not support it yet.')
-
     if not request_id_prefixes:
         request_id_prefixes = None
     fields = _DEFAULT_REQUEST_FIELDS_TO_SHOW
