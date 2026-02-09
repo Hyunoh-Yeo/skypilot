@@ -883,7 +883,7 @@ class TestBackwardCompatibility:
             # Verify success
             f'[ "$exit_code" -eq 0 ] || exit 1; '
             # Verify NO warning (flag is supported)
-            f'echo "$result" | grep -qi "flag is ignored.*server does not support" || '
+            f'! echo "$result" | grep -qi "flag is ignored.*server does not support" || '
             f'{{ echo "ERROR: Unexpected warning with new server"; exit 1; }}; '
             # Verify filtering WORKS (only target cluster shown)
             f'echo "$result" | grep -q "{cluster_name}" || exit 1; '
