@@ -2354,9 +2354,7 @@ def api_status(
 
     # Backward compatibility check for the new flag cluster_name
     version = versions.get_remote_api_version()
-    if version is None:
-        version = -1
-    if (cluster_name is not None) and (version < 37):
+    if (cluster_name is not None) and (version is not None and version < 37):
         logger.warning(
             'The flag is ignored because the server does not support it yet.')
 
