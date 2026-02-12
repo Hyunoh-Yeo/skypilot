@@ -251,7 +251,14 @@ def _extract_user_from_header(
 
     user_hash = hashlib.md5(
         user_name.encode()).hexdigest()[:common_utils.USER_HASH_LENGTH]
-    return models.User(id=user_hash, name=user_name)
+    if proxy_config.enabled:
+        return models.User(id=user_hash,
+                           name=user_name,
+                           user_type=models.UserType.LEGACY.value)
+    else:
+        return models.User(id=user_hash,
+                           name=user_name,
+                           user_type=models.UserType.SSO.value)
 
 
 def _get_auth_user_header(request: fastapi.Request) -> Optional[models.User]:
@@ -2187,6 +2194,9 @@ async def health(request: fastapi.Request) -> responses.APIHealthResponse:
         ingress_basic_auth_enabled=os.environ.get(
             constants.SKYPILOT_INGRESS_BASIC_AUTH_ENABLED,
             'false').lower() == 'true',
+        # Whether external proxy auth is enabled (from server.yaml config)
+        external_proxy_auth_enabled=server_config.load_external_proxy_config().
+        enabled,
         # Latest version info (if available and newer than current)
         latest_version=latest_version,
     )
@@ -2781,6 +2791,15 @@ def _init_or_restore_server_user_hash():
 
 
 if __name__ == '__main__':
+    # Raise the websockets library header limits before importing uvicorn.
+    # The env vars are read by websockets.http11 and websockets.legacy.http
+    # at import time. Enterprise SSO cookies from oauth2proxy can exceed the
+    # default 8KB limit, causing WebSocket upgrade to fail with HTTP 400.
+    os.environ.setdefault('WEBSOCKETS_MAX_LINE_LENGTH',
+                          server_constants.WEBSOCKETS_MAX_HEADER_LINE_LENGTH)
+    os.environ.setdefault('WEBSOCKETS_MAX_NUM_HEADERS',
+                          server_constants.WEBSOCKETS_MAX_NUM_HEADERS)
+
     import uvicorn
 
     from sky.server import uvicorn as skyuvicorn
