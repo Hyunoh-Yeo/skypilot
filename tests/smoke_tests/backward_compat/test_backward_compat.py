@@ -846,7 +846,7 @@ class TestBackwardCompatibility:
     def test_cluster_status_filter_compatibility(self, generic_cloud: str):
         """Test that new --cluster flag is backward compatible with old servers"""
         CLUSTER_FILTER_MIN_API_VERSION = 38  # The version that introduced this feature
-        if self.BASE_API_VERSION >= CLUSTER_FILTER_MIN_API_VERSION:
+        if self.BASE_API_VERSION < CLUSTER_FILTER_MIN_API_VERSION:
             pytest.skip(
                 f'Base API version {self.BASE_API_VERSION} already supports cluster filtering '
                 f'(introduced in version {CLUSTER_FILTER_MIN_API_VERSION}). Skipping test.'
